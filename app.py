@@ -8,9 +8,8 @@ from io import BytesIO
 
 app = FastAPI()
 
-# Định nghĩa đường dẫn đến mô hình (Render sử dụng thư mục /opt/render để lưu file)
-MODEL_DIR = os.getenv("MODEL_DIR", "./model")
-MODEL_PATH = os.path.join(MODEL_DIR, "model.onnx")
+# Định nghĩa đường dẫn đến mô hình ONNX (model.onnx nằm trong thư mục gốc của project)
+MODEL_PATH = os.getenv("MODEL_PATH", "./model.onnx")
 
 # Kiểm tra xem mô hình có tồn tại không
 if not os.path.exists(MODEL_PATH):
@@ -68,7 +67,7 @@ async def predict(image: UploadFile = File(...)):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-# Dùng lệnh dưới đây để chạy nếu bạn chạy trực tiếp tệp này
+# Chạy ứng dụng nếu tệp được chạy trực tiếp
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
