@@ -57,7 +57,7 @@ async def predict(image: UploadFile = File(...)):
 
         # Gọi suy luận (inference) của mô hình
         ort_outs = ort_session.run(None, ort_inputs)
-
+        print(ort_outs)
         # TODO: Xử lý đầu ra của mô hình để chuyển thành chuỗi chú thích
         # Phần này phụ thuộc vào cấu trúc đầu ra của mô hình của bạn.
         # Ví dụ: nếu đầu ra là một dãy các chỉ số token, bạn cần giải mã chúng thành từ ngữ.
@@ -72,7 +72,5 @@ async def predict(image: UploadFile = File(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-from fastapi.routing import APIRoute
 
-for route in app.routes:
-    print(route.path, route.methods)
+
