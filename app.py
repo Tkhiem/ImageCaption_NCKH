@@ -34,12 +34,13 @@ def process_output(ort_outs):
     # Chuyển đầu ra thành NumPy array nếu chưa phải
     if isinstance(ort_outs, list):
         ort_outs = np.array(ort_outs)
-    
+  
     print("📌 Shape của output:", ort_outs.shape)
     print("📌 Giá trị đầu ra:", ort_outs)
     print("📌 Kiểu dữ liệu:", ort_outs.dtype)
     token_ids = np.argmax(ort_outs[0], axis=-1)  # Chọn token có xác suất cao nhất
     print("📌 Token IDs sau khi argmax:", token_ids)
+    print("📌 Shape của output trước argmax:", ort_outs[0].shape)
 
     return ort_outs
 
