@@ -9,9 +9,9 @@ from io import BytesIO
 
 app = FastAPI()
 
-# Định nghĩa đường dẫn đến mô hình ONNX (model.onnx nằm trong thư mục gốc của project)
+# Định nghĩa đường dẫn đến mô hình và từ điển
 MODEL_PATH = os.getenv("MODEL_PATH", "./model.onnx")
-VOCAB_PATH = os.getenv("VOCAB_PATH", "./tokenizer/vocab.json")
+VOCAB_PATH = os.getenv("VOCAB_PATH", "./tokenizer/vocab_fixed.json")
 
 # Kiểm tra xem mô hình có tồn tại không
 if not os.path.exists(MODEL_PATH):
@@ -23,29 +23,30 @@ try:
 except Exception as e:
     raise RuntimeError(f"Lỗi khi load mô hình ONNX: {str(e)}")
 
-# Load từ điển vocab.json
+# Load từ điển vocab_fixed.json
 if not os.path.exists(VOCAB_PATH):
     raise FileNotFoundError(f"Không tìm thấy file từ điển tại: {VOCAB_PATH}")
 
 with open(VOCAB_PATH, "r", encoding="utf-8") as f:
     vocab = json.load(f)
 
-# Tạo ánh xạ ID -> từ
+# Tạo ánh xạ ID -> từ (file vocab_fixed.json đã đúng định dạng)
 id_to_word = {int(k): v for k, v in vocab.items()}
 
 def decode_tokens(token_ids):
     """Chuyển token ID thành câu caption."""
-    words = [id_to_word.get(token_id, "") for token_id in token_ids]
-    words = [word for word in words if word not in ["[PAD]", "[START]", "[END]"]]  # Loại bỏ token đặc biệt
+    words = []
+    for token_id in token_ids:
+        word = id_to_word.get(token_id, "")  # Lấy từ theo ID, nếu không có thì bỏ qua
+        if word in ["[PAD]", "[START]", "[END]", ""]:
+            continue  # Loại bỏ token đặc biệt và từ rỗng
+        words.append(word)
+    
     return " ".join(words).capitalize() + "."
 
 @app.get("/")
 def read_root():
     return {"message": "API chạy thành công trên Render!"}
-
-@app.get("/predict")
-def get_predict():
-    return {"message": "Chức năng dự đoán chưa được triển khai (GET)"}
 
 @app.post("/predict/")
 async def predict(image: UploadFile = File(...)):
@@ -68,7 +69,7 @@ async def predict(image: UploadFile = File(...)):
         ort_outs = ort_session.run(None, ort_inputs)
         
         # Lấy token ID sau argmax
-        token_ids = np.argmax(ort_outs[0], axis=-1).tolist()
+        token_ids = np.argmax(ort_outs[0], axis=-1).tolist()[0]  # Lấy kết quả của batch đầu tiên
 
         # Giải mã token ID thành caption
         caption = decode_tokens(token_ids)
