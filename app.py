@@ -30,7 +30,8 @@ def get_predict():
     return {"message": "Chức năng dự đoán chưa được triển khai (GET)"}
 
 # Endpoint POST /predict để nhận file ảnh và trả về chú thích
-@app.post("/predict")
+@app.post("/predict", include_in_schema=False)
+@app.post("/predict/")
 async def predict(image: UploadFile = File(...)):
     try:
         # Đọc nội dung file ảnh từ client
