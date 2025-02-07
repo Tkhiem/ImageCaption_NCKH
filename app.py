@@ -30,7 +30,7 @@ def get_predict():
     return {"message": "Chức năng dự đoán chưa được triển khai (GET)"}
 
 # Endpoint POST /predict để nhận file ảnh và trả về chú thích
-@app.post("/predict", include_in_schema=False)
+
 @app.post("/predict/")
 async def predict(image: UploadFile = File(...)):
     try:
@@ -72,3 +72,7 @@ async def predict(image: UploadFile = File(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+from fastapi.routing import APIRoute
+
+for route in app.routes:
+    print(route.path, route.methods)
