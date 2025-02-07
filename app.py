@@ -38,7 +38,9 @@ def process_output(ort_outs):
     print("📌 Shape của output:", ort_outs.shape)
     print("📌 Giá trị đầu ra:", ort_outs)
     print("📌 Kiểu dữ liệu:", ort_outs.dtype)
-    
+    token_ids = np.argmax(ort_outs[0], axis=-1)  # Chọn token có xác suất cao nhất
+    print("📌 Token IDs sau khi argmax:", token_ids)
+
     return ort_outs
 
 # Endpoint POST /predict để nhận file ảnh và trả về chú thích
