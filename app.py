@@ -29,42 +29,41 @@ def read_root():
 def get_predict():
     return {"message": "Chức năng dự đoán chưa được triển khai (GET)"}
 
-# Endpoint POST /predict để nhận file ảnh và trả về chú thích
+# Hàm xử lý đầu ra của mô hình
+def process_output(ort_outs):
+    # Chuyển đầu ra thành NumPy array nếu chưa phải
+    if isinstance(ort_outs, list):
+        ort_outs = np.array(ort_outs)
+    
+    print("📌 Shape của output:", ort_outs.shape)
+    print("📌 Giá trị đầu ra:", ort_outs)
+    print("📌 Kiểu dữ liệu:", ort_outs.dtype)
+    
+    return ort_outs
 
+# Endpoint POST /predict để nhận file ảnh và trả về chú thích
 @app.post("/predict/")
 async def predict(image: UploadFile = File(...)):
     try:
         # Đọc nội dung file ảnh từ client
         contents = await image.read()
-        # Mở ảnh bằng Pillow
-        img = Image.open(BytesIO(contents))
-        img = img.convert("RGB")  # Đảm bảo ảnh ở chế độ RGB
-
-        # Tiền xử lý ảnh: ví dụ, resize về kích thước 224x224 (điều chỉnh theo yêu cầu mô hình)
-        img = img.resize((224, 224))
-        # Chuyển đổi ảnh sang mảng NumPy kiểu float32
-        input_array = np.array(img).astype(np.float32)
-        # Chuẩn hóa ảnh (giả sử mô hình yêu cầu giá trị giữa 0 và 1)
-        input_array = input_array / 255.0
-        # Chuyển đổi định dạng từ (H, W, C) sang (C, H, W) nếu mô hình yêu cầu
-        input_array = np.transpose(input_array, (2, 0, 1))
-        # Thêm batch dimension: kết quả có shape (1, C, H, W)
-        input_array = np.expand_dims(input_array, axis=0)
-
+        img = Image.open(BytesIO(contents)).convert("RGB")
+        img = img.resize((224, 224))  # Resize ảnh theo yêu cầu mô hình
+        
+        # Chuyển đổi ảnh sang mảng NumPy
+        input_array = np.array(img).astype(np.float32) / 255.0
+        input_array = np.transpose(input_array, (2, 0, 1))  # Chuyển từ (H, W, C) -> (C, H, W)
+        input_array = np.expand_dims(input_array, axis=0)  # Thêm batch dimension
+        
         # Chuẩn bị input cho mô hình ONNX
         input_name = ort_session.get_inputs()[0].name
         ort_inputs = {input_name: input_array}
 
         # Gọi suy luận (inference) của mô hình
         ort_outs = ort_session.run(None, ort_inputs)
-        print( "Output của mô hình ONNX :",ort_outs)
-        print(" Shape của output:", ort_outs[0].shape)
-        print(" Giá trị đầu ra:", ort_outs[0])
-        print("Kiểu dữ liệu:", ort_outs.dtype)
+        processed_output = process_output(ort_outs[0])
+        
         # TODO: Xử lý đầu ra của mô hình để chuyển thành chuỗi chú thích
-        # Phần này phụ thuộc vào cấu trúc đầu ra của mô hình của bạn.
-        # Ví dụ: nếu đầu ra là một dãy các chỉ số token, bạn cần giải mã chúng thành từ ngữ.
-        # Dưới đây là ví dụ giả định:
         caption = "Dummy caption - implement decoding logic here"
 
         return JSONResponse(content={"caption": caption})
@@ -75,5 +74,3 @@ async def predict(image: UploadFile = File(...)):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
-
-
