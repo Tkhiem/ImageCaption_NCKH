@@ -58,6 +58,8 @@ async def predict(image: UploadFile = File(...)):
         # Gọi suy luận (inference) của mô hình
         ort_outs = ort_session.run(None, ort_inputs)
         print( "Output của mô hình ONNX :",ort_outs)
+        print(" Shape của output:", ort_outs[0].shape)
+        print(" Giá trị đầu ra:", ort_outs[0])
         # TODO: Xử lý đầu ra của mô hình để chuyển thành chuỗi chú thích
         # Phần này phụ thuộc vào cấu trúc đầu ra của mô hình của bạn.
         # Ví dụ: nếu đầu ra là một dãy các chỉ số token, bạn cần giải mã chúng thành từ ngữ.
