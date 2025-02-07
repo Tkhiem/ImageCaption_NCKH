@@ -1,4 +1,5 @@
 import os
+import json
 import onnxruntime as ort
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
@@ -10,6 +11,7 @@ app = FastAPI()
 
 # Định nghĩa đường dẫn đến mô hình ONNX (model.onnx nằm trong thư mục gốc của project)
 MODEL_PATH = os.getenv("MODEL_PATH", "./model.onnx")
+VOCAB_PATH = os.getenv("VOCAB_PATH", "./tokenizer/vocab.json")
 
 # Kiểm tra xem mô hình có tồn tại không
 if not os.path.exists(MODEL_PATH):
@@ -21,6 +23,22 @@ try:
 except Exception as e:
     raise RuntimeError(f"Lỗi khi load mô hình ONNX: {str(e)}")
 
+# Load từ điển vocab.json
+if not os.path.exists(VOCAB_PATH):
+    raise FileNotFoundError(f"Không tìm thấy file từ điển tại: {VOCAB_PATH}")
+
+with open(VOCAB_PATH, "r", encoding="utf-8") as f:
+    vocab = json.load(f)
+
+# Tạo ánh xạ ID -> từ
+id_to_word = {int(k): v for k, v in vocab.items()}
+
+def decode_tokens(token_ids):
+    """Chuyển token ID thành câu caption."""
+    words = [id_to_word.get(token_id, "") for token_id in token_ids]
+    words = [word for word in words if word not in ["[PAD]", "[START]", "[END]"]]  # Loại bỏ token đặc biệt
+    return " ".join(words).capitalize() + "."
+
 @app.get("/")
 def read_root():
     return {"message": "API chạy thành công trên Render!"}
@@ -29,22 +47,6 @@ def read_root():
 def get_predict():
     return {"message": "Chức năng dự đoán chưa được triển khai (GET)"}
 
-# Hàm xử lý đầu ra của mô hình
-def process_output(ort_outs):
-    # Chuyển đầu ra thành NumPy array nếu chưa phải
-    if isinstance(ort_outs, list):
-        ort_outs = np.array(ort_outs)
-  
-    print("📌 Shape của output:", ort_outs.shape)
-    print("📌 Giá trị đầu ra:", ort_outs)
-    print("📌 Kiểu dữ liệu:", ort_outs.dtype)
-    token_ids = np.argmax(ort_outs[0], axis=-1)  # Chọn token có xác suất cao nhất
-    print("📌 Token IDs sau khi argmax:", token_ids)
-    print("📌 Shape của output trước argmax:", ort_outs[0].shape)
-
-    return ort_outs
-
-# Endpoint POST /predict để nhận file ảnh và trả về chú thích
 @app.post("/predict/")
 async def predict(image: UploadFile = File(...)):
     try:
@@ -64,10 +66,12 @@ async def predict(image: UploadFile = File(...)):
 
         # Gọi suy luận (inference) của mô hình
         ort_outs = ort_session.run(None, ort_inputs)
-        processed_output = process_output(ort_outs[0])
         
-        # TODO: Xử lý đầu ra của mô hình để chuyển thành chuỗi chú thích
-        caption = "Dummy caption - implement decoding logic here"
+        # Lấy token ID sau argmax
+        token_ids = np.argmax(ort_outs[0], axis=-1).tolist()
+
+        # Giải mã token ID thành caption
+        caption = decode_tokens(token_ids)
 
         return JSONResponse(content={"caption": caption})
     except Exception as e:
