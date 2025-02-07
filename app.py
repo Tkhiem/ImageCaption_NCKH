@@ -35,11 +35,15 @@ id_to_word = {int(k): v for k, v in vocab.items()}
 
 def decode_tokens(token_ids):
     """Chuyển token ID thành câu caption."""
-    if not isinstance(token_ids, list):  # Fix lỗi nếu token_ids không phải list
+    if not isinstance(token_ids, list):
         token_ids = [token_ids]
 
-    words = [id_to_word.get(token_id, "[UNK]") for token_id in token_ids]  # Thay vì lỗi, dùng [UNK]
-    words = [word for word in words if word not in ["[PAD]", "[START]", "[END]"]]  # Loại bỏ token đặc biệt
+    print("DEBUG - Token IDs:", token_ids)  # In token_ids trước khi decode
+
+    words = [id_to_word.get(token_id, "[UNK]") for token_id in token_ids]
+    print("DEBUG - Decoded words:", words)  # In danh sách từ được dịch ra
+
+    words = [word for word in words if word not in ["[PAD]", "[START]", "[END]"]]
     return " ".join(words).capitalize() + "."
 
 @app.get("/")
@@ -72,7 +76,8 @@ async def predict(image: UploadFile = File(...)):
 
         # Lấy token ID (output của mô hình)
         token_ids = np.argmax(ort_outs[0], axis=-1)  # Lấy ID có xác suất cao nhất
-
+        # In token_ids để debug
+        print("Token IDs:", token_ids)
         # Nếu chỉ có 1 caption (batch size = 1), chuyển thành list
         if isinstance(token_ids, np.ndarray):
             token_ids = token_ids.tolist()
